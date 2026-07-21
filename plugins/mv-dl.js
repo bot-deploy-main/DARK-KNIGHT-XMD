@@ -592,7 +592,7 @@ cmd({
       const res = await axios.get(url);
       data = res.data;
 
-      if (!data.success || !data.data.all?.length) {
+      if (!data.success || !data.data.movies?.length) {
         throw new Error("No results found for your query.");
       }
 
@@ -748,7 +748,7 @@ cmd({
       const res = await axios.get(url);
       data = res.data;
 
-      if (!data.success || !data.data?.data?.length) {
+      if (!data.success || !data.data?.movies?.length) {
         throw new Error("No results found for your query.");
       }
 
