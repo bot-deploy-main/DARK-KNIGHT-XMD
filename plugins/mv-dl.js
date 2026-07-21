@@ -17,7 +17,7 @@ cmd({
 
   if (!q) {
     return await conn.sendMessage(from, {
-      text: "⚠️ *Usage:* .cinesubztv <tvshow name>"
+      text: "*Use:* .cinesubztv <tvshow name>"
     }, { quoted: mek });
   }
 
@@ -32,7 +32,7 @@ cmd({
 
       if (!data.success || !data.data.tvshows?.length) {
         return await conn.sendMessage(from, { 
-          text: "❌ *No TV Shows found for your query.*" 
+          text: "*No TV Shows found for your query.*" 
         }, { quoted: mek });
       }
 
@@ -90,8 +90,7 @@ cmd({
         if (tvData.cast && Array.isArray(tvData.cast) && tvData.cast.length > 0) {
           castList = tvData.cast
             .map(c => typeof c === 'object' ? (c.actor?.name || c.actor || "") : c)
-            .filter(Boolean)
-            .join(", ");
+            .filter(Boolean).join(", ");
         }
 
         let tvInfo = 
@@ -111,11 +110,7 @@ cmd({
           caption: tvInfo
         }, { quoted: msg });
 
-        movieMap.set(seasonMsg.key.id, { 
-          step: "SEASON", 
-          selected, 
-          tvData, 
-          seasons: tvData.episodesDetails 
+        movieMap.set(seasonMsg.key.id, { step: "SEASON", selected, tvData, seasons: tvData.episodesDetails 
         });
       }
 
@@ -135,8 +130,7 @@ cmd({
           if (tvData?.cast && Array.isArray(tvData.cast) && tvData.cast.length > 0) {
             castList = tvData.cast
               .map(c => typeof c === 'object' ? (c.actor?.name || c.actor || "") : c)
-              .filter(Boolean)
-              .join(", ");
+              .filter(Boolean).join(", ");
           }
 
           let epInfo = 
@@ -156,10 +150,7 @@ cmd({
             caption: epInfo
           }, { quoted: msg });
 
-          movieMap.set(epMsg.key.id, { 
-            step: "EPISODE", 
-            selected: sessionData.selected, 
-            episodes: chosenSeason.episodes 
+          movieMap.set(epMsg.key.id, { step: "EPISODE", selected: sessionData.selected, episodes: chosenSeason.episodes 
           });
         }
 
@@ -198,10 +189,7 @@ cmd({
             caption: dlInfo
           }, { quoted: msg });
 
-          movieMap.set(downloadMsg.key.id, { 
-            step: "DOWNLOAD", 
-            selected: { title: `${epData.title || sessionData.selected.title}` }, 
-            downloads: epData.downloadUrl 
+          movieMap.set(downloadMsg.key.id, { step: "DOWNLOAD", selected: { title: `${epData.title || sessionData.selected.title}` }, downloads: epData.downloadUrl 
           });
         }
 
@@ -209,7 +197,7 @@ cmd({
           const { selected, downloads } = sessionData;
           const chosen = downloads[num - 1];
           if (!chosen) {
-            return conn.sendMessage(from, { text: "❌ *Invalid quality number.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "*Invalid quality number.*" }, { quoted: msg });
           }
 
           await conn.sendMessage(from, { react: { text: "📥", key: msg.key } });
@@ -229,21 +217,18 @@ cmd({
 
           let finalDownloadLink = downloadLinks?.find(link => 
             link.url.includes("pixeldrain.com") && 
-            !link.url.includes("t.me") && 
-            !link.url.includes("telegram")
-          )?.url;
+            !link.url.includes("t.me") && !link.url.includes("telegram"))?.url;
 
           if (!finalDownloadLink) {
             const backupLink = downloadLinks?.find(link => 
               !link.url.includes("t.me") && 
-              !link.url.includes("telegram") && 
-              link.url.startsWith("http")
+              !link.url.includes("telegram") && link.url.startsWith("http")
             );
             finalDownloadLink = backupLink?.url;
           }
 
           if (!finalDownloadLink) {
-            return conn.sendMessage(from, { text: "❌ *Download link not found or expired.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "*Download link not found or expired.*" }, { quoted: msg });
           }
 
           await conn.sendMessage(from, {
@@ -855,7 +840,7 @@ cmd({
       movieCache.set(cacheKey, data);
     }
 
-    const movieList = data.data.all.map((m, i) => ({
+    const movieList = data.data.movies.map((m, i) => ({
       number: i + 1,
       title: m.title,
       link: m.link
@@ -1004,14 +989,14 @@ cmd({
       const res = await axios.get(url);
       data = res.data;
 
-      if (!data.success || !data.data?.movies?.length) {
+      if (!data.success || !data.data.movies?.length) {
         throw new Error("No results found for your query.");
       }
 
       movieCache.set(cacheKey, data);
     }
     
-    const movieList = data.data.data.map((m, i) => ({
+    const movieList = data.data.movies.map((m, i) => ({
       number: i + 1,
       title: m.title,
       link: m.link
