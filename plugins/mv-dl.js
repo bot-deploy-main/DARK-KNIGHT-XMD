@@ -6,9 +6,9 @@ const NodeCache = require("node-cache");
 const movieCache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 const KEY = "vajira-VajiraOfficial2003";
 
+
 cmd({
   pattern: "cinesubztv",
-  alias: ["cine"],
   desc: "🎥 Search Sinhala subbed TV shows from CineSubz",
   category: "media",
   react: "📺",
@@ -17,7 +17,7 @@ cmd({
 
   if (!q) {
     return await conn.sendMessage(from, {
-      text: "Use: .cinesubz <tvshow name>"
+      text: "⚠️ *Usage:* .cinesubztv <tvshow name>"
     }, { quoted: mek });
   }
 
@@ -31,7 +31,9 @@ cmd({
       data = res.data;
 
       if (!data.success || !data.data.tvshows?.length) {
-        throw new Error("No TV Shows found for your query.");
+        return await conn.sendMessage(from, { 
+          text: "❌ *No TV Shows found for your query.*" 
+        }, { quoted: mek });
       }
 
       movieCache.set(cacheKey, data);
@@ -43,7 +45,7 @@ cmd({
       link: item.link
     }));
 
-    let textList = "🔢 𝑅𝑒𝑝𝑙𝑦 𝐵𝑒𝑙𝑜𝑤 𝑁𝑢𝑚𝑏𝑒𝑟\n━━━━━━━━━━━━━━━\n\n";
+    let textList = "🔢 *Reply Below Number*\n━━━━━━━━━━━━━━━\n\n";
     movieList.forEach((item) => {
       textList += `🔸 *${item.number}. ${item.title}*\n`;
     });
@@ -64,14 +66,14 @@ cmd({
 
       if (replyText.toLowerCase() === "done") {
         conn.ev.off("messages.upsert", listener);
-        return conn.sendMessage(from, { text: "✅ *Cancelled*" }, { quoted: msg });
+        return conn.sendMessage(from, { text: "✅ *Process Cancelled*" }, { quoted: msg });
       }
- 
+
       if (repliedId === sentMsg.key.id) {
         const num = parseInt(replyText);
         const selected = movieList.find(m => m.number === num);
         if (!selected) {
-          return conn.sendMessage(from, { text: "*Invalid TV show number.*" }, { quoted: msg });
+          return conn.sendMessage(from, { text: "❌ *Invalid TV show number.*" }, { quoted: msg });
         }
 
         await conn.sendMessage(from, { react: { text: "🎯", key: msg.key } });
@@ -81,12 +83,15 @@ cmd({
         const tvData = tvRes.data?.data;
 
         if (!tvData || !tvData.episodesDetails?.length) {
-          return conn.sendMessage(from, { text: "*No TV Show episodes found.*" }, { quoted: msg });
+          return conn.sendMessage(from, { text: "❌ *No TV Show episodes found.*" }, { quoted: msg });
         }
 
         let castList = "N/A";
         if (tvData.cast && Array.isArray(tvData.cast) && tvData.cast.length > 0) {
-          castList = tvData.cast.map(c => typeof c === 'object' ? `${c.actor?.name || c.actor} (${c.character || ""})` : c).join(", ");
+          castList = tvData.cast
+            .map(c => typeof c === 'object' ? (c.actor?.name || c.actor || "") : c)
+            .filter(Boolean)
+            .join(", ");
         }
 
         let tvInfo = 
@@ -107,9 +112,14 @@ cmd({
           caption: tvInfo
         }, { quoted: msg });
 
-        movieMap.set(seasonMsg.key.id, { step: "SEASON", selected, tvData, seasons: tvData.episodesDetails });
+        movieMap.set(seasonMsg.key.id, { 
+          step: "SEASON", 
+          selected, 
+          tvData, 
+          seasons: tvData.episodesDetails 
+        });
       }
-        
+
       else if (movieMap.has(repliedId)) {
         const sessionData = movieMap.get(repliedId);
         const num = parseInt(replyText);
@@ -117,14 +127,17 @@ cmd({
         if (sessionData.step === "SEASON") {
           const chosenSeason = sessionData.seasons[num - 1];
           if (!chosenSeason) {
-            return conn.sendMessage(from, { text: "*Invalid season number.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "❌ *Invalid season number.*" }, { quoted: msg });
           }
 
           const { tvData } = sessionData;
 
           let castList = "N/A";
           if (tvData?.cast && Array.isArray(tvData.cast) && tvData.cast.length > 0) {
-            castList = tvData.cast.map(c => typeof c === 'object' ? `${c.actor?.name || c.actor} (${c.character || ""})` : c).join(", ");
+            castList = tvData.cast
+              .map(c => typeof c === 'object' ? (c.actor?.name || c.actor || "") : c)
+              .filter(Boolean)
+              .join(", ");
           }
 
           let epInfo = 
@@ -144,13 +157,17 @@ cmd({
             caption: epInfo
           }, { quoted: msg });
 
-          movieMap.set(epMsg.key.id, { step: "EPISODE", selected: sessionData.selected, episodes: chosenSeason.episodes });
+          movieMap.set(epMsg.key.id, { 
+            step: "EPISODE", 
+            selected: sessionData.selected, 
+            episodes: chosenSeason.episodes 
+          });
         }
 
         else if (sessionData.step === "EPISODE") {
           const chosenEp = sessionData.episodes.find(e => parseInt(e.number) === num);
           if (!chosenEp) {
-            return conn.sendMessage(from, { text: "*Invalid episode number.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "❌ *Invalid episode number.*" }, { quoted: msg });
           }
 
           await conn.sendMessage(from, { react: { text: "🎯", key: msg.key } });
@@ -160,7 +177,7 @@ cmd({
           const epData = epRes.data?.data;
 
           if (!epData || !epData.downloadUrl?.length) {
-            return conn.sendMessage(from, { text: "*No download links available.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "❌ *No download links available.*" }, { quoted: msg });
           }
 
           let dlInfo = 
@@ -182,14 +199,18 @@ cmd({
             caption: dlInfo
           }, { quoted: msg });
 
-          movieMap.set(downloadMsg.key.id, { step: "DOWNLOAD", selected: { title: `${epData.title || sessionData.selected.title}` }, downloads: epData.downloadUrl });
+          movieMap.set(downloadMsg.key.id, { 
+            step: "DOWNLOAD", 
+            selected: { title: `${epData.title || sessionData.selected.title}` }, 
+            downloads: epData.downloadUrl 
+          });
         }
 
         else if (sessionData.step === "DOWNLOAD") {
           const { selected, downloads } = sessionData;
           const chosen = downloads[num - 1];
           if (!chosen) {
-            return conn.sendMessage(from, { text: "*Invalid quality number.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "❌ *Invalid quality number.*" }, { quoted: msg });
           }
 
           await conn.sendMessage(from, { react: { text: "📥", key: msg.key } });
@@ -198,31 +219,34 @@ cmd({
           const sizeGB = size.includes("gb") ? parseFloat(size) : parseFloat(size) / 1024;
 
           if (sizeGB > 2) {
-            return conn.sendMessage(from, { text: `⚠️ *Large File (${chosen.size})*` }, { quoted: msg });
+            return conn.sendMessage(from, { text: `⚠️ *File is too large (${chosen.size}). WhatsApp limit is 2GB.*` }, { quoted: msg });
           }
-          
+
           const chosenlink = chosen.link.replace(/bot\d+/, 'bot3');
-          
+
           const apiUrl = `https://cine-download-api.vercel.app/api/download?url=${encodeURIComponent(chosenlink)}`;
           const apiRes = await axios.get(apiUrl);
           const downloadLinks = apiRes.data?.data?.downloadUrls;
 
           let finalDownloadLink = downloadLinks?.find(link => 
-            link.url.includes("pixeldrain.com") && !link.url.includes("t.me")
+            link.url.includes("pixeldrain.com") && 
+            !link.url.includes("t.me") && 
+            !link.url.includes("telegram")
           )?.url;
-          
+
           if (!finalDownloadLink) {
             const backupLink = downloadLinks?.find(link => 
               !link.url.includes("t.me") && 
-              (link.url.startsWith("http"))
+              !link.url.includes("telegram") && 
+              link.url.startsWith("http")
             );
             finalDownloadLink = backupLink?.url;
           }
-          
+
           if (!finalDownloadLink) {
-            return conn.sendMessage(from, { text: "*download link not found.*" }, { quoted: msg });
+            return conn.sendMessage(from, { text: "❌ *Download link not found or expired.*" }, { quoted: msg });
           }
-          
+
           await conn.sendMessage(from, {
             document: { url: finalDownloadLink },
             mimetype: "video/mp4",
@@ -236,7 +260,7 @@ cmd({
     conn.ev.on("messages.upsert", listener);
 
   } catch (err) {
-    await conn.sendMessage(from, { text: `*Error:* ${err.message}` }, { quoted: mek }); 
+    await conn.sendMessage(from, { text: `⚠️ *Error:* ${err.message}` }, { quoted: mek }); 
   }
 });
 
