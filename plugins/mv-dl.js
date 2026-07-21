@@ -95,8 +95,7 @@ cmd({
         }
 
         let tvInfo = 
-          `🎬 *Main Title:* ${tvData.maintitle || "N/A"}\n` +
-          `📌 *Title:* ${tvData.title || "N/A"}\n\n` +
+          `🎬 *Title:* ${tvData.title || "N/A"}\n` +
           `⭐ *IMDb:* ${tvData.imdb || "N/A"}\n` +
           `🎭 *Category:* ${tvData.category ? tvData.category.join(", ") : "N/A"}\n` +
           `👥 *Cast:* ${castList}\n\n` +
