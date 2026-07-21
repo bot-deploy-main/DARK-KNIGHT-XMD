@@ -6,6 +6,239 @@ const NodeCache = require("node-cache");
 const movieCache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 const KEY = "vajira-VajiraOfficial2003";
 
+cmd({
+  pattern: "cinesubztv",
+  alias: ["cine"],
+  desc: "🎥 Search Sinhala subbed TV shows from CineSubz",
+  category: "media",
+  react: "📺",
+  filename: __filename
+}, async (conn, mek, m, { from, q }) => {
+
+  if (!q) {
+    return await conn.sendMessage(from, {
+      text: "Use: .cinesubz <tvshow name>"
+    }, { quoted: mek });
+  }
+
+  try {
+    const cacheKey = `cinesubz_${q.toLowerCase()}`;
+    let data = movieCache.get(cacheKey);
+
+    if (!data) {
+      const url = `https://darkyasiya-new-movie-api.vercel.app/api/movie/cinesubz/search?q=${encodeURIComponent(q)}`;
+      const res = await axios.get(url);
+      data = res.data;
+
+      if (!data.success || !data.data.tvshows?.length) {
+        throw new Error("No TV Shows found for your query.");
+      }
+
+      movieCache.set(cacheKey, data);
+    }
+
+    const movieList = data.data.tvshows.map((item, index) => ({
+      number: index + 1,
+      title: item.title,
+      link: item.link
+    }));
+
+    let textList = "🔢 𝑅𝑒𝑝𝑙𝑦 𝐵𝑒𝑙𝑜𝑤 𝑁𝑢𝑚𝑏𝑒𝑟\n━━━━━━━━━━━━━━━\n\n";
+    movieList.forEach((item) => {
+      textList += `🔸 *${item.number}. ${item.title}*\n`;
+    });
+    textList += "\n💬 *Reply with TV show number to view details.*";
+
+    const sentMsg = await conn.sendMessage(from, {
+      text: `*🔍 𝐂𝐈𝐍𝐄𝐒𝐔𝐁𝐙 𝑻𝑽 𝑺𝑬𝑨𝑹𝑪𝑯 📺*\n\n${textList}\n\n> Powered by 𝙳𝙰𝚁𝙺-𝙺𝙽𝙸𝙶𝙷𝚃-𝚇𝙼𝙳`
+    }, { quoted: mek });
+
+    const movieMap = new Map();
+
+    const listener = async (update) => {
+      const msg = update.messages?.[0];
+      if (!msg?.message?.extendedTextMessage) return;
+
+      const replyText = msg.message.extendedTextMessage.text.trim();
+      const repliedId = msg.message.extendedTextMessage.contextInfo?.stanzaId;
+
+      if (replyText.toLowerCase() === "done") {
+        conn.ev.off("messages.upsert", listener);
+        return conn.sendMessage(from, { text: "✅ *Cancelled*" }, { quoted: msg });
+      }
+ 
+      if (repliedId === sentMsg.key.id) {
+        const num = parseInt(replyText);
+        const selected = movieList.find(m => m.number === num);
+        if (!selected) {
+          return conn.sendMessage(from, { text: "*Invalid TV show number.*" }, { quoted: msg });
+        }
+
+        await conn.sendMessage(from, { react: { text: "🎯", key: msg.key } });
+
+        const tvUrl = `https://cine-download-api.vercel.app/api/tvshow?url=${encodeURIComponent(selected.link)}`;
+        const tvRes = await axios.get(tvUrl);
+        const tvData = tvRes.data?.data;
+
+        if (!tvData || !tvData.episodesDetails?.length) {
+          return conn.sendMessage(from, { text: "*No TV Show episodes found.*" }, { quoted: msg });
+        }
+
+        let castList = "N/A";
+        if (tvData.cast && Array.isArray(tvData.cast) && tvData.cast.length > 0) {
+          castList = tvData.cast.map(c => typeof c === 'object' ? `${c.actor?.name || c.actor} (${c.character || ""})` : c).join(", ");
+        }
+
+        let tvInfo = 
+          `🎬 *Main Title:* ${tvData.maintitle || "N/A"}\n` +
+          `📌 *Title:* ${tvData.title || "N/A"}\n\n` +
+          `⭐ *IMDb:* ${tvData.imdb || "N/A"}\n` +
+          `🎭 *Category:* ${tvData.category ? tvData.category.join(", ") : "N/A"}\n` +
+          `👥 *Cast:* ${castList}\n\n` +
+          `📁 *Seasons:* 🔻\n\n`;
+
+        tvData.episodesDetails.forEach((s, index) => {
+          tvInfo += `🔷 ${index + 1}. *Season ${s.season}* (${s.episodes.length} Episodes)\n`;
+        });
+        tvInfo += "\n🔢 *Reply with season number.*";
+
+        const seasonMsg = await conn.sendMessage(from, {
+          image: { url: tvData.mainImage },
+          caption: tvInfo
+        }, { quoted: msg });
+
+        movieMap.set(seasonMsg.key.id, { step: "SEASON", selected, tvData, seasons: tvData.episodesDetails });
+      }
+        
+      else if (movieMap.has(repliedId)) {
+        const sessionData = movieMap.get(repliedId);
+        const num = parseInt(replyText);
+
+        if (sessionData.step === "SEASON") {
+          const chosenSeason = sessionData.seasons[num - 1];
+          if (!chosenSeason) {
+            return conn.sendMessage(from, { text: "*Invalid season number.*" }, { quoted: msg });
+          }
+
+          const { tvData } = sessionData;
+
+          let castList = "N/A";
+          if (tvData?.cast && Array.isArray(tvData.cast) && tvData.cast.length > 0) {
+            castList = tvData.cast.map(c => typeof c === 'object' ? `${c.actor?.name || c.actor} (${c.character || ""})` : c).join(", ");
+          }
+
+          let epInfo = 
+            `📌 *Title:* ${tvData?.title || "N/A"}\n` +
+            `⭐ *IMDb:* ${tvData?.imdb || "N/A"}\n` +
+            `🎭 *Category:* ${tvData?.category ? tvData.category.join(", ") : "N/A"}\n` +
+            `👥 *Cast:* ${castList}\n\n` +
+            `📺 *Season ${chosenSeason.season} Episodes:* 🔻\n\n`;
+
+          chosenSeason.episodes.forEach((ep) => {
+            epInfo += `🔹 *${ep.number}. ${ep.title}*\n`;
+          });
+          epInfo += "\n🔢 *Reply with episode number.*";
+
+          const epMsg = await conn.sendMessage(from, {
+            image: tvData?.mainImage ? { url: tvData.mainImage } : undefined,
+            caption: epInfo
+          }, { quoted: msg });
+
+          movieMap.set(epMsg.key.id, { step: "EPISODE", selected: sessionData.selected, episodes: chosenSeason.episodes });
+        }
+
+        else if (sessionData.step === "EPISODE") {
+          const chosenEp = sessionData.episodes.find(e => parseInt(e.number) === num);
+          if (!chosenEp) {
+            return conn.sendMessage(from, { text: "*Invalid episode number.*" }, { quoted: msg });
+          }
+
+          await conn.sendMessage(from, { react: { text: "🎯", key: msg.key } });
+
+          const epUrl = `https://cine-download-api.vercel.app/api/episode?url=${encodeURIComponent(chosenEp.url)}`;
+          const epRes = await axios.get(epUrl);
+          const epData = epRes.data?.data;
+
+          if (!epData || !epData.downloadUrl?.length) {
+            return conn.sendMessage(from, { text: "*No download links available.*" }, { quoted: msg });
+          }
+
+          let dlInfo = 
+            `🎬 *Main Title:* ${epData.maintitle || "N/A"}\n` +
+            `📌 *Title:* ${epData.title || "N/A"}\n` +
+            `📺 *Episode Title:* ${epData.episodeTitle || chosenEp.title}\n` +
+            `📅 *Date Created:* ${epData.dateCreate || "N/A"}\n\n` +
+            `🎥 *𝑫𝒐𝒘𝒏𝒍𝒐𝒂𝒅 𝑳𝒊𝒏𝒌𝒔:* 📥\n\n`;
+
+          epData.downloadUrl.forEach((d, index) => {
+            dlInfo += `♦️ ${index + 1}. *${d.quality}* — ${d.size} (${d.language || "N/A"})\n`;
+          });
+          dlInfo += "\n🔢 *Reply with quality number to download.*";
+
+          const imageUrl = epData.imageUrls && epData.imageUrls.length > 0 ? epData.imageUrls[0] : undefined;
+
+          const downloadMsg = await conn.sendMessage(from, {
+            image: imageUrl ? { url: imageUrl } : undefined,
+            caption: dlInfo
+          }, { quoted: msg });
+
+          movieMap.set(downloadMsg.key.id, { step: "DOWNLOAD", selected: { title: `${epData.title || sessionData.selected.title}` }, downloads: epData.downloadUrl });
+        }
+
+        else if (sessionData.step === "DOWNLOAD") {
+          const { selected, downloads } = sessionData;
+          const chosen = downloads[num - 1];
+          if (!chosen) {
+            return conn.sendMessage(from, { text: "*Invalid quality number.*" }, { quoted: msg });
+          }
+
+          await conn.sendMessage(from, { react: { text: "📥", key: msg.key } });
+
+          const size = chosen.size.toLowerCase();
+          const sizeGB = size.includes("gb") ? parseFloat(size) : parseFloat(size) / 1024;
+
+          if (sizeGB > 2) {
+            return conn.sendMessage(from, { text: `⚠️ *Large File (${chosen.size})*` }, { quoted: msg });
+          }
+          
+          const chosenlink = chosen.link.replace(/bot\d+/, 'bot3');
+          
+          const apiUrl = `https://cine-download-api.vercel.app/api/download?url=${encodeURIComponent(chosenlink)}`;
+          const apiRes = await axios.get(apiUrl);
+          const downloadLinks = apiRes.data?.data?.downloadUrls;
+
+          let finalDownloadLink = downloadLinks?.find(link => 
+            link.url.includes("pixeldrain.com") && !link.url.includes("t.me")
+          )?.url;
+          
+          if (!finalDownloadLink) {
+            const backupLink = downloadLinks?.find(link => 
+              !link.url.includes("t.me") && 
+              (link.url.startsWith("http"))
+            );
+            finalDownloadLink = backupLink?.url;
+          }
+          
+          if (!finalDownloadLink) {
+            return conn.sendMessage(from, { text: "*download link not found.*" }, { quoted: msg });
+          }
+          
+          await conn.sendMessage(from, {
+            document: { url: finalDownloadLink },
+            mimetype: "video/mp4",
+            fileName: `${selected.title} - ${chosen.quality}.mp4`,
+            caption: `🎬 *${selected.title}*\n🎥 *${chosen.quality}*\n\n> Powered by 𝙳𝙰𝚁𝙺-𝙺𝙽𝙸𝙶𝙷𝚃-𝚇𝙼𝙳`
+          }, { quoted: msg });
+        }
+      }
+    };
+
+    conn.ev.on("messages.upsert", listener);
+
+  } catch (err) {
+    await conn.sendMessage(from, { text: `*Error:* ${err.message}` }, { quoted: mek }); 
+  }
+});
 
 cmd({
   pattern: "moviepro",
