@@ -933,21 +933,21 @@ cmd({
         const apiRes = await axios.get(apiUrl);
         const downloadLinks = apiRes.data?.data?.downloadUrls;
 
-        let finalDownloadLink = downloadLinks?.find(link => 
-            link.url.includes("pixeldrain.com") && !link.url.includes("t.me")
-        )?.url;
-        
-        if (!finalDownloadLink) {
+          let finalDownloadLink = downloadLinks?.find(link => 
+            link.url.includes("pixeldrain.com") && 
+            !link.url.includes("t.me") && !link.url.includes("telegram"))?.url;
+
+          if (!finalDownloadLink) {
             const backupLink = downloadLinks?.find(link => 
-                !link.url.includes("t.me") && 
-                (link.url.startsWith("http"))
+              !link.url.includes("t.me") && 
+              !link.url.includes("telegram") && link.url.startsWith("http")
             );
             finalDownloadLink = backupLink?.url;
-        }
-        
-        if (!finalDownloadLink) {
-            return conn.sendMessage(from, { text: "*download link not found.*" }, { quoted: msg });
-        }
+          }
+
+          if (!finalDownloadLink) {
+            return conn.sendMessage(from, { text: "*Download link not found or expired.*" }, { quoted: msg });
+          }
         
         await conn.sendMessage(from, {
           document: { url: finalDownloadLink },
