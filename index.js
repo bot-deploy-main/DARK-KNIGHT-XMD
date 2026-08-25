@@ -125,15 +125,19 @@ const port = process.env.PORT || 8000;
 ╰─ 🛠️ *Prefix:* \`${config.PREFIX}\`
 
 > _© Made By 𝙳𝙰𝚁𝙺-𝙺𝙽𝙸𝙶𝙷𝚃_`;
-    conn.sendMessage(conn.user.id, { image: { url: config.ALIVE_IMG }, caption: up })
+    
+	  conn.sendMessage(conn.decodeJid(conn?.user?.id || conn?.user?.lid), { image: { url: config.ALIVE_IMG }, caption: up });
   }
   })
+	  /*conn.sendMessage(conn.user.id, { image: { url: config.ALIVE_IMG }, caption: up })
+  }
+  })*/
   conn.ev.on('creds.update', saveCreds)
 
   conn.ev.on('messages.update', async updates => {
     for (const update of updates) {
       if (update.update.message === null) {
-        console.log("Delete Detected:", JSON.stringify(update, null, 2));
+        //console.log("Delete Detected:", JSON.stringify(update, null, 2));
         await AntiDelete(conn, updates);
       }
     }
@@ -149,7 +153,7 @@ const port = process.env.PORT || 8000;
     //console.log("New Message Detected:", JSON.stringify(mek, null, 2));
   if (config.READ_MESSAGE === 'true') {
     await conn.readMessages([mek.key]);
-    console.log(`Marked message from ${mek.key.remoteJid} as read.`);
+    //console.log(`Marked message from ${mek.key.remoteJid} as read.`);
   }
     if(mek.message.viewOnceMessageV2)
     mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
