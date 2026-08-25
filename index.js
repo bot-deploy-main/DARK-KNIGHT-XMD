@@ -86,7 +86,7 @@ const port = process.env.PORT || 8000;
           logger: P({ level: 'silent' }),
           printQRInTerminal: false,
           browser: Browsers.macOS("Firefox"),
-          syncFullHistory: true,
+          syncFullHistory: false,
           auth: state,
           version
           })
