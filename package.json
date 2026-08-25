@@ -13,7 +13,6 @@
     "@vitalets/google-translate-api": "^9.2.1",
     "@whiskeysockets/baileys": "latest",
     "adm-zip": "^0.5.16",
-    "api-dylux": "latest",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.5.0",
